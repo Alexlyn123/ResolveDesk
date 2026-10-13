@@ -18,12 +18,13 @@ return [
     |
     */
 
+    // The host the app is being served from is always first-party, whatever port or
+    // hostname it is opened on. Cross-site pages still have a different Origin.
     'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
         '%s%s',
         'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
         Sanctum::currentApplicationUrlWithPort(),
-        // Sanctum::currentRequestHost(),
-    ))),
+    )).Sanctum::currentRequestHost()),
 
     /*
     |--------------------------------------------------------------------------

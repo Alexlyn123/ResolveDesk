@@ -7,7 +7,9 @@ use App\Models\Membership;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -109,6 +111,17 @@ class AuthenticationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.user.email', $user->email)
             ->assertJsonPath('data.organizations.0.id', $organization->id);
+    }
+
+    public function test_the_app_is_first_party_on_whatever_host_it_is_served_from(): void
+    {
+        foreach (['localhost:8001', 'resolvedesk.test', '192.168.1.20:8000'] as $host) {
+            $own = Request::create("http://{$host}/api/user", 'GET', server: ['HTTP_ORIGIN' => "http://{$host}"]);
+            $foreign = Request::create("http://{$host}/api/user", 'GET', server: ['HTTP_ORIGIN' => 'https://evil.example']);
+
+            $this->assertTrue(EnsureFrontendRequestsAreStateful::fromFrontend($own), "{$host} must keep its session");
+            $this->assertFalse(EnsureFrontendRequestsAreStateful::fromFrontend($foreign), "{$host} must not trust other origins");
+        }
     }
 
     public function test_sign_in_fails_with_wrong_credentials(): void
